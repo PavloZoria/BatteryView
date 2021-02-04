@@ -18,9 +18,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.fillUp).setOnClickListener {
             with(lifecycleScope) {
                 launch {
-                    while (batteryLevelIndicator.percent != 100f) {
+                    while (batteryLevelIndicator.percentage != 100f) {
                         delay(25)
-                        batteryLevelIndicator.percent += 1
+                        batteryLevelIndicator.percentage += 1
                     }
                 }
             }
@@ -28,9 +28,9 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.freeUp).setOnClickListener {
             with(lifecycleScope) {
                 launch {
-                    while (batteryLevelIndicator.percent != 0f) {
+                    while (batteryLevelIndicator.percentage != 0f) {
                         delay(25)
-                        batteryLevelIndicator.percent -= 1
+                        batteryLevelIndicator.percentage -= 1
                     }
                 }
             }

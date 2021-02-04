@@ -1,6 +1,7 @@
 package com.pavlo.zoria.batteryview.battery
 
 import android.content.Context
+import android.content.res.TypedArray
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.CornerPathEffect
@@ -19,20 +20,12 @@ class BatteryLevelIndicator @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) :
     View(context, attrs, defStyleAttr) {
-    private var radius: Float = 4f
+    //region internatl state
+    private var cornerRadius: Float = 4f
+    private var colorBounds: MutableList<BatteryColorBoundary> = mutableListOf()
+    //endregion
 
-    // end
-    private var endingPath = Path()
-    private var endRectPaint =
-        Paint().apply {
-            style = Paint.Style.STROKE
-            pathEffect = CornerPathEffect(radius)
-            strokeCap = Paint.Cap.ROUND
-            isAntiAlias = true
-        }
-    private var endPaintHeightPercent = 40
-    private var endPaintWidthPercent = 2
-
+    //region Drawing
     // Border
     private var borderPaint = Paint().apply {
         color = getColor(context, R.color.battery_border)
@@ -44,14 +37,25 @@ class BatteryLevelIndicator @JvmOverloads constructor(
     // Percent
     private var progressMaxEndingPosition = 0f
     private var percentagePaint = Paint().apply {
-        pathEffect = CornerPathEffect(radius)
+        pathEffect = CornerPathEffect(cornerRadius)
         strokeCap = Paint.Cap.ROUND
         isAntiAlias = true
         style = Paint.Style.FILL
     }
+    // end
+    private var endingPath = Path()
+    private var endRectPaint =
+        Paint().apply {
+            style = Paint.Style.STROKE
+            pathEffect = CornerPathEffect(cornerRadius)
+            strokeCap = Paint.Cap.ROUND
+            isAntiAlias = true
+        }
+    private var endPaintHeightPercent = 40
+    private var endPaintWidthPercent = 2
+    //enderegion
 
-    private lateinit var colorBounds: BatteryColorBoundaries
-
+    //region Public interface
     @ColorInt
     var borderColor: Int = Color.WHITE
         set(@ColorInt value) {
@@ -70,13 +74,13 @@ class BatteryLevelIndicator @JvmOverloads constructor(
         }
 
     private var percentRect = RectF()
-    var percent: Float = 50f
+    var percentage: Float = 50f
         set(value) {
             field = when {
-                percent > 100f -> {
+                percentage > 100f -> {
                     100f
                 }
-                percent < 0f -> {
+                percentage < 0f -> {
                     0f
                 }
                 else -> {
@@ -86,50 +90,22 @@ class BatteryLevelIndicator @JvmOverloads constructor(
             invalidate()
         }
 
+    fun setColorBoundary(boundary: BatteryColorBoundary) {
+        colorBounds.add(boundary)
+        colorBounds.sortBy { it.topBound }
+        invalidate()
+    }
+    //endregion
+
     init {
         init(attrs)
     }
 
     private fun init(attrs: AttributeSet?) {
         val typedValue =
-            context.obtainStyledAttributes(attrs, R.styleable.BatteryLevelIndicatorView)
+            context.obtainStyledAttributes(attrs, R.styleable.BatteryLevelIndicator)
         try {
-            percent = typedValue.getFloat(R.styleable.BatteryLevelIndicatorView_percent, 0f)
-            radius =
-                typedValue.getDimension(R.styleable.BatteryLevelIndicatorView_cornerRadius, 14f)
-                    .also {
-                        endRectPaint.pathEffect = CornerPathEffect(it * 1.5f)
-                    }
-
-            borderStroke =
-                typedValue.getDimension(R.styleable.BatteryLevelIndicatorView_borderStrokeSize, 4f)
-                    .also {
-                        borderPaint.strokeWidth = it
-                        endRectPaint.strokeWidth = it
-                    }
-
-            typedValue.getColor(
-                R.styleable.BatteryLevelIndicatorView_borderStrokeColor,
-                Color.BLACK
-            ).also {
-                borderPaint.color = it
-                endRectPaint.color = it
-            }
-
-            val lowLevelColor = typedValue.getColorStateList(
-                R.styleable.BatteryLevelIndicatorView_lowLevelColor
-            )?.defaultColor ?: Color.RED
-            val normalLevelColor = typedValue.getColorStateList(
-                R.styleable.BatteryLevelIndicatorView_normalLevelColor
-            )?.defaultColor ?: Color.MAGENTA
-            val excellentLevelColor = typedValue.getColorStateList(
-                R.styleable.BatteryLevelIndicatorView_excellentLevelColor
-            )?.defaultColor ?: Color.GREEN
-            colorBounds = BatteryColorBoundaries(
-                BatteryColorBoundary(20, lowLevelColor),
-                BatteryColorBoundary(50, normalLevelColor),
-                BatteryColorBoundary(100, excellentLevelColor)
-            )
+            readAttributes(typedValue)
         } finally {
             typedValue.recycle()
         }
@@ -168,21 +144,21 @@ class BatteryLevelIndicator @JvmOverloads constructor(
     }
 
     override fun onDraw(canvas: Canvas) {
-        drawPercentage(canvas, percent)
+        drawPercentage(canvas, percentage)
         drawBatteryBody(canvas)
         drawEndPath(canvas)
     }
 
     private fun drawBatteryBody(canvas: Canvas) {
-        canvas.drawRoundRect(borderRect, radius, radius, borderPaint)
+        canvas.drawRoundRect(borderRect, cornerRadius, cornerRadius, borderPaint)
     }
 
-    private fun drawPercentage(canvas: Canvas, percent: Float) {
-        percentagePaint.color = getPercentColor(percent)
+    private fun drawPercentage(canvas: Canvas, percentage: Float) {
+        percentagePaint.color = getPercentColor(percentage)
         //calculate right position to display the percentage of battery
         percentRect.right =
-            progressMaxEndingPosition + (percentRect.left - progressMaxEndingPosition) * (100 - percent) / 100
-        canvas.drawRoundRect(percentRect, radius / 1.5f, radius / 1.5f, percentagePaint)
+            progressMaxEndingPosition + (percentRect.left - progressMaxEndingPosition) * (100 - percentage) / 100
+        canvas.drawRoundRect(percentRect, cornerRadius / 1.5f, cornerRadius / 1.5f, percentagePaint)
     }
 
     private fun drawEndPath(canvas: Canvas) {
@@ -190,15 +166,48 @@ class BatteryLevelIndicator @JvmOverloads constructor(
     }
 
     private fun getPercentColor(percent: Float): Int {
-        return colorBounds.boundaries.sortedBy {
+        return colorBounds.sortedBy {
             it.topBound
         }.firstOrNull {
             it.topBound >= percent
         }?.color ?: Color.TRANSPARENT
     }
+    private fun readAttributes(typedValue: TypedArray) {
+        percentage = typedValue.getFloat(R.styleable.BatteryLevelIndicator_percent, 0f)
+        cornerRadius =
+            typedValue.getDimension(R.styleable.BatteryLevelIndicator_cornerRadius, 14f)
+                .also {
+                    endRectPaint.pathEffect = CornerPathEffect(it * 1.5f)
+                }
 
-    fun setColorBoundary(boundary: BatteryColorBoundary) {
-        colorBounds.boundaries.add(boundary)
-        colorBounds.boundaries.sortBy { it.topBound }
+        borderStroke =
+            typedValue.getDimension(R.styleable.BatteryLevelIndicator_borderStrokeSize, 4f)
+                .also {
+                    borderPaint.strokeWidth = it
+                    endRectPaint.strokeWidth = it
+                }
+
+        typedValue.getColor(
+            R.styleable.BatteryLevelIndicator_borderStrokeColor,
+            Color.BLACK
+        ).also {
+            borderPaint.color = it
+            endRectPaint.color = it
+        }
+
+        val lowLevelColor = typedValue.getColorStateList(
+            R.styleable.BatteryLevelIndicator_lowLevelColor
+        )?.defaultColor ?: Color.RED
+        val normalLevelColor = typedValue.getColorStateList(
+            R.styleable.BatteryLevelIndicator_normalLevelColor
+        )?.defaultColor ?: Color.YELLOW
+        val excellentLevelColor = typedValue.getColorStateList(
+            R.styleable.BatteryLevelIndicator_excellentLevelColor
+        )?.defaultColor ?: Color.GREEN
+        colorBounds = mutableListOf(
+            BatteryColorBoundary(25, lowLevelColor),
+            BatteryColorBoundary(75, normalLevelColor),
+            BatteryColorBoundary(100, excellentLevelColor)
+        )
     }
 }

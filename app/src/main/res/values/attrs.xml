@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="BatteryLevelIndicatorView">
+    <declare-styleable name="BatteryLevelIndicator">
         <attr name="percent" format="float"/>
         <attr name="cornerRadius" format="dimension"/>
         <attr name="borderStrokeSize" format="dimension"/>
