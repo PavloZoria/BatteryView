@@ -136,7 +136,6 @@ class BatteryLevelIndicatorView @JvmOverloads constructor(
         }
     }
 
-    @SuppressLint("DrawAllocation")
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val measureHeight = getDefaultSize(suggestedMinimumHeight, heightMeasureSpec)
         val measureWidth = getDefaultSize(suggestedMinimumWidth, widthMeasureSpec)
@@ -147,7 +146,7 @@ class BatteryLevelIndicatorView @JvmOverloads constructor(
         val rightRectTop = measureHeight * ((100 - endPaintHeightPercent) / 2) / 100
         val rightRectBottom = measureHeight - rightRectTop
         val rightRectWidth = measureWidth - rightRectStart
-        endingPath = Path().apply {
+        endingPath = endingPath.apply {
             moveTo(rightRectStart.toFloat(), rightRectTop.toFloat())
             lineTo(measureWidth.toFloat(), rightRectTop.toFloat())
             lineTo(measureWidth.toFloat(), rightRectBottom.toFloat())
@@ -159,14 +158,14 @@ class BatteryLevelIndicatorView @JvmOverloads constructor(
         val borderTop = 0f
         val borderRight = (measureWidth - borderStroke / 2) - rightRectWidth.toFloat()
         val borderBottom = measureHeight - borderStroke / 2
-        borderRect = RectF(borderLeft, borderTop, borderRight, borderBottom)
+        borderRect.set(borderLeft, borderTop, borderRight, borderBottom)
 
         // Progress
         val progressLeft = borderStroke / 2
         val progressTop = borderStroke / 2
         progressMaxEndingPosition = measureWidth - rightRectWidth.toFloat() - borderStroke
         val progressBottom = measureHeight - borderStroke / 2
-        percentRect = RectF(progressLeft, progressTop, progressMaxEndingPosition, progressBottom)
+        percentRect.set(progressLeft, progressTop, progressMaxEndingPosition, progressBottom)
     }
 
     override fun onDraw(canvas: Canvas) {
